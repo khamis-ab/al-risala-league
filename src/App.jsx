@@ -123,7 +123,7 @@ const MATCHES = [
   {id:"F1", day:4,slot:3,time:"00:40–01:15",isKnockout:true,label:"🏆 Final",    desc:"Winner SF1 vs Winner SF2"},
 ]
 
-const ADMIN_PIN = "1234"
+const ADMIN_PIN = "7632"
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function computeStandings(teams, scores) {
