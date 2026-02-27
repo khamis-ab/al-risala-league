@@ -123,7 +123,7 @@ const MATCHES = [
   {id:"F1", day:4,slot:3,time:"00:40–01:15",isKnockout:true,label:"🏆 Final",    desc:"Winner SF1 vs Winner SF2"},
 ]
 
-const ADMIN_PIN = "khamis1"
+const ADMIN_PIN = "1234"
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function computeStandings(teams, scores) {
@@ -307,15 +307,26 @@ export default function App() {
       setScores(u); persist("rl_scores",u)
     }
 
-    const toggleScorer=(playerId,teamId)=>{
+    // Add one goal entry for a player
+    const addGoal=(playerId,teamId)=>{
       const isHome=teamId===dyn.h
       const key=isHome?"homeGoals":"awayGoals"
       const cur=parseInt(s[key])||0
-      const idx=scorers.findIndex(sc=>sc.playerId===playerId&&sc.teamId===teamId)
-      let ns,newGoals
-      if(idx>=0){ns=scorers.filter((_,i)=>i!==idx);newGoals=Math.max(0,cur-1)}
-      else{ns=[...scorers,{playerId,teamId}];newGoals=cur+1}
-      const u={...scores,[match.id]:{...s,scorers:ns,[key]:newGoals}}
+      const ns=[...scorers,{playerId,teamId}]
+      const u={...scores,[match.id]:{...s,scorers:ns,[key]:cur+1}}
+      setScores(u); persist("rl_scores",u)
+    }
+
+    // Remove one goal entry for a player (removes last occurrence)
+    const removeGoal=(playerId,teamId)=>{
+      const isHome=teamId===dyn.h
+      const key=isHome?"homeGoals":"awayGoals"
+      const cur=parseInt(s[key])||0
+      // Find and remove only the LAST occurrence for this player
+      const lastIdx=[...scorers].map((sc,i)=>sc.playerId===playerId&&sc.teamId===teamId?i:-1).filter(i=>i>=0).pop()
+      if(lastIdx===undefined) return
+      const ns=scorers.filter((_,i)=>i!==lastIdx)
+      const u={...scores,[match.id]:{...s,scorers:ns,[key]:Math.max(0,cur-1)}}
       setScores(u); persist("rl_scores",u)
     }
 
@@ -348,8 +359,11 @@ export default function App() {
         </div>
         {ht&&at&&(
           <div style={{background:"#0d1b2a",borderRadius:16,padding:24,border:"1px solid #1e3a52"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:18}}>
-              ⚽ Goal Scorers <span style={{fontWeight:400,color:"rgba(255,255,255,.2)"}}>— tap to add / remove</span>
+            <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:6}}>
+              ⚽ Goal Scorers
+            </div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.25)",marginBottom:18}}>
+              Tap <strong style={{color:"#5ae47a"}}>+</strong> to add a goal · <strong style={{color:"#e45a5a"}}>−</strong> to remove one
             </div>
             <div className="grid-2">
               {[{team:ht,pl:hp},{team:at,pl:ap}].map(({team,pl})=>(
@@ -359,10 +373,31 @@ export default function App() {
                     {pl.map(p=>{
                       const goals=goalsByPlayer[p.id]||0
                       return(
-                        <button key={p.id} className={`pchip ${goals>0?"sel":""}`} onClick={()=>toggleScorer(p.id,team?.id)}>
-                          <span>{p.name}{p.captain?" ©":""}</span>
-                          {goals>0&&<span style={{background:team?.color+"33",color:team?.color,borderRadius:99,padding:"1px 8px",fontSize:11,fontWeight:700,flexShrink:0}}>⚽ {goals}</span>}
-                        </button>
+                        <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 10px",borderRadius:8,background:goals>0?"rgba(90,173,228,.08)":"#080f1a",border:`1.5px solid ${goals>0?"#5aade4":"#1e3a52"}`,transition:"all .15s"}}>
+                          {/* Player name */}
+                          <span style={{flex:1,fontSize:13,fontWeight:500,color:goals>0?"#e8f4fd":"rgba(255,255,255,.6)"}}>
+                            {p.name}{p.captain?" ©":""}
+                          </span>
+                          {/* Goal count badge */}
+                          {goals>0&&(
+                            <span style={{background:team?.color+"33",color:team?.color,borderRadius:99,padding:"1px 8px",fontSize:12,fontWeight:800,flexShrink:0}}>
+                              ⚽ {goals}
+                            </span>
+                          )}
+                          {/* − button */}
+                          <button
+                            onClick={()=>removeGoal(p.id,team?.id)}
+                            disabled={goals===0}
+                            style={{width:28,height:28,borderRadius:6,background:goals>0?"rgba(228,90,90,.15)":"rgba(255,255,255,.04)",border:`1px solid ${goals>0?"rgba(228,90,90,.4)":"rgba(255,255,255,.1)"}`,color:goals>0?"#e45a5a":"rgba(255,255,255,.2)",fontSize:16,fontWeight:700,cursor:goals>0?"pointer":"not-allowed",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,transition:"all .15s"}}>
+                            −
+                          </button>
+                          {/* + button */}
+                          <button
+                            onClick={()=>addGoal(p.id,team?.id)}
+                            style={{width:28,height:28,borderRadius:6,background:"rgba(90,228,122,.15)",border:"1px solid rgba(90,228,122,.4)",color:"#5ae47a",fontSize:16,fontWeight:700,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,transition:"all .15s"}}>
+                            +
+                          </button>
+                        </div>
                       )
                     })}
                   </div>
